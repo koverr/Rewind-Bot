@@ -7,7 +7,12 @@ export function VerifyDiscordRequest(clientKey) {
     const signature = req.get('X-Signature-Ed25519');
     const timestamp = req.get('X-Signature-Timestamp');
 
-    const isValidRequest = verifyKey(buf, signature, timestamp, clientKey);
+    const isValidRequest = verifyKey(
+      buf,
+      signature,
+      timestamp,
+      clientKey
+    );
     if (!isValidRequest) {
       res.status(401).send('Bad request signature');
       throw new Error('Bad request signature');
@@ -25,9 +30,10 @@ export async function DiscordRequest(endpoint, options) {
     headers: {
       Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
       'Content-Type': 'application/json; charset=UTF-8',
-      'User-Agent': 'DiscordBot (https://github.com/discord/discord-example-app, 1.0.0)',
+      'User-Agent':
+        'RewindBot (https://github.com/koverr/Rewind-Bot, 1.0.0)',
     },
-    ...options
+    ...options,
   });
   // throw API errors
   if (!res.ok) {
@@ -51,9 +57,38 @@ export async function InstallGlobalCommands(appId, commands) {
   }
 }
 
+export async function InstallGuildCommands(appId, guildId, commands) {
+  // API endpoint to overwrite guild commands
+  const endpoint = `applications/${appId}/guilds/${guildId}/commands`;
+
+  try {
+    await DiscordRequest(endpoint, {
+      method: 'PUT',
+      body: commands,
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 // Simple method that returns a random emoji from list
 export function getRandomEmoji() {
-  const emojiList = ['😭','😄','😌','🤓','😎','😤','🤖','😶‍🌫️','🌏','📸','💿','👋','🌊','✨'];
+  const emojiList = [
+    '😭',
+    '😄',
+    '😌',
+    '🤓',
+    '😎',
+    '😤',
+    '🤖',
+    '😶‍🌫️',
+    '🌏',
+    '📸',
+    '💿',
+    '👋',
+    '🌊',
+    '✨',
+  ];
   return emojiList[Math.floor(Math.random() * emojiList.length)];
 }
 
