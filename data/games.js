@@ -1,32 +1,38 @@
 export function getGames() {
-  return Object.keys(GAMES);
+  return GAMES;
 }
 
 const BO2 = {
+  id: 'BO2',
   name: 'Black Ops 2',
-  modes: {
-    hp: {
+  modes: [
+    {
+      id: 'hp',
       name: 'Hardpoint',
       description: 'Hardpoint is played for Maps 1 and 4',
       maps: ['Raid', 'Slums', 'Standoff', 'Yemen'],
     },
-    snd: {
+    {
+      id: 'snd',
       name: 'Search and Destroy',
       description: 'Search and Destroy is played for Maps 2 and 5',
       maps: ['Express', 'Meltdown', 'Raid', 'Standoff'],
     },
-    ctf: {
+    {
+      id: 'ctf',
       name: 'Capture the Flag',
       description: 'Capture the Flag is played for Map 3',
       maps: ['Raid', 'Slums', 'Standoff'],
     },
-  },
+  ],
 };
 
 const MW22 = {
+  id: 'MW22',
   name: 'Modern Warfare 2 (2022)',
-  modes: {
-    hp: {
+  modes: [
+    {
+      id: 'hp',
       name: 'Hardpoint',
       description: 'Hardpoint is played for Maps 1 and 4',
       maps: [
@@ -37,7 +43,8 @@ const MW22 = {
         'Zarqwa Hydroelectric',
       ],
     },
-    snd: {
+    {
+      id: 'snd',
       name: 'Search and Destroy',
       description: 'Search and Destroy is played for Maps 2 and 5',
       maps: [
@@ -48,12 +55,13 @@ const MW22 = {
         'Mercado Las Almas',
       ],
     },
-    ctrl: {
+    {
+      id: 'ctrl',
       name: 'Control',
       description: 'Control is played for Map 3',
       maps: ['Breenbergh Hotel', 'El Asilo', 'Himmelmatt Expo'],
     },
-  },
+  ],
 };
 
-const GAMES = { BO2, MW22 };
+const GAMES = [BO2, MW22];

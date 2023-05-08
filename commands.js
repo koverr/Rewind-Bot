@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { getRPSChoices } from './game.js';
 import {
   capitalize,
   InstallGlobalCommands,
@@ -9,16 +8,13 @@ import { getGames } from './data/games.js';
 
 // Get the game choices from game.js
 function createGameCommandChoices() {
-  const choices = getGames();
   const commandChoices = [];
-
-  for (let choice of choices) {
+  getGames().forEach(function (choice) {
     commandChoices.push({
-      name: capitalize(choice),
-      value: choice.toLowerCase(),
+      name: capitalize(choice.name),
+      value: choice.id,
     });
-  }
-
+  });
   return commandChoices;
 }
 
@@ -31,9 +27,16 @@ const TEST_COMMAND = {
 
 // Command containing options
 const MAP_VETO_COMMAND = {
+  type: 1,
   name: 'veto',
   description: 'Setup what maps will be played in a Best of 5 series',
   options: [
+    {
+      type: 6,
+      name: 'captain',
+      description: 'The captain to start the veto process with',
+      required: true,
+    },
     {
       type: 3,
       name: 'game',
@@ -42,7 +45,6 @@ const MAP_VETO_COMMAND = {
       choices: createGameCommandChoices(),
     },
   ],
-  type: 1,
 };
 
 // const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND];

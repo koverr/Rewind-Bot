@@ -71,6 +71,43 @@ export async function InstallGuildCommands(appId, guildId, commands) {
   }
 }
 
+export async function StartThreadWithMessage(
+  channelId,
+  messageId,
+  user1,
+  user2,
+  game
+) {
+  const endpoint = `channels/${channelId}/messages/${messageId}/threads`;
+
+  try {
+    await DiscordRequest(endpoint, {
+      method: 'POST',
+      body: {
+        name: `${user1} & ${user2} ${game} Veto Thread`,
+        auto_archive_duration: 60,
+        // type: 12,
+        // invitable: false,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function GetUser(userId) {
+  const endpoint = `users/${userId}`;
+
+  try {
+    const res = await DiscordRequest(endpoint, {
+      method: 'GET',
+    });
+    return res.json();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 // Simple method that returns a random emoji from list
 export function getRandomEmoji() {
   const emojiList = [

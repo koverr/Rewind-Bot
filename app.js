@@ -5,7 +5,6 @@ import {
   InteractionResponseType,
   InteractionResponseFlags,
   MessageComponentTypes,
-  ButtonStyleTypes,
 } from 'discord-interactions';
 import {
   VerifyDiscordRequest,
@@ -13,6 +12,8 @@ import {
   DiscordRequest,
 } from './utils.js';
 import { getShuffledOptions, getResult } from './game.js';
+import { doStartVeto, doStartVetoThread } from './veto.js';
+import { VETO_JOIN_BUTTON_ID } from './constants.js';
 
 // Create an express app
 const app = express();
@@ -24,12 +25,6 @@ app.use(
     verify: VerifyDiscordRequest(process.env.PUBLIC_KEY),
   })
 );
-
-const VETO_JOIN_HEADS_ID = 'heads_button_';
-const VETO_JOIN_TAILS_ID = 'tails_button_';
-
-// Store for in-progress games. In production, you'd want to use a DB
-const activeVetos = {};
 
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
@@ -48,60 +43,23 @@ app.post('/interactions', async function (req, res) {
       switch (data.name) {
         case 'test':
           doTest(res);
+          break;
         case 'veto':
           if (id) {
             doStartVeto(id, req, res);
           }
+          break;
       }
-      return;
+      break;
 
     case InteractionType.MESSAGE_COMPONENT:
-  }
+      // custom_id set in payload when sending message component
+      const componentId = data.custom_id;
 
-  if (type === InteractionType.MESSAGE_COMPONENT) {
-    // custom_id set in payload when sending message component
-    const componentId = data.custom_id;
-
-    if (componentId.startsWith(VETO_JOIN_HEADS_ID)) {
-      return doSelectTeam(componentId, req, res);
-    } else if (componentId.startsWith('select_choice_')) {
-      // get the associated game ID
-      const gameId = componentId.replace('select_choice_', '');
-
-      if (activeVetos[gameId]) {
-        // Get user ID and object choice for responding user
-        const userId = req.body.member.user.id;
-        const objectName = data.values[0];
-        // Calculate result from helper function
-        const resultStr = getResult(activeVetos[gameId], {
-          id: userId,
-          objectName,
-        });
-
-        // Remove game from storage
-        delete activeVetos[gameId];
-        // Update message with token in request body
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/${req.body.message.id}`;
-
-        try {
-          // Send results
-          await res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: resultStr },
-          });
-          // Update ephemeral message
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: 'Nice choice ' + getRandomEmoji(),
-              components: [],
-            },
-          });
-        } catch (err) {
-          console.error('Error sending message:', err);
-        }
+      if (componentId.startsWith(VETO_JOIN_BUTTON_ID)) {
+        await doStartVetoThread(componentId, req, res);
       }
-    }
+      break;
   }
 });
 
@@ -116,49 +74,9 @@ function doTest(res) {
   });
 }
 
-function doStartVeto(id, req, res) {
-  const userId = req.body.member.user.id;
-  // User's game choice
-  const gameName = req.body.data.options[0].value;
-
-  // Create active veto session using message ID as the veto ID
-  activeVetos[id] = {
-    id: userId,
-    gameName,
-  };
-
-  return res.send({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      content: `Map veto start from <@${userId}>, choose heads or tails to join`,
-      components: [
-        {
-          type: MessageComponentTypes.ACTION_ROW,
-          components: [
-            {
-              type: MessageComponentTypes.BUTTON,
-              // Append the game ID to use later on
-              custom_id: `${VETO_JOIN_HEADS_ID}${req.body.id}`,
-              label: 'Heads',
-              style: ButtonStyleTypes.SECONDARY,
-            },
-            {
-              type: MessageComponentTypes.BUTTON,
-              // Append the game ID to use later on
-              custom_id: `${VETO_JOIN_TAILS_ID}${req.body.id}`,
-              label: 'Tails',
-              style: ButtonStyleTypes.SECONDARY,
-            },
-          ],
-        },
-      ],
-    },
-  });
-}
-
 async function doSelectTeam(componentId, req, res) {
   // get the associated game ID
-  const gameId = componentId.replace(VETO_JOIN_HEADS_ID, '');
+  const gameId = componentId.replace(VETO_JOIN_BUTTON_ID, '');
   // Delete message with token in request body
   const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/${req.body.message.id}`;
   try {
@@ -193,3 +111,42 @@ async function doSelectTeam(componentId, req, res) {
 app.listen(PORT, () => {
   console.log('Listening on port', PORT);
 });
+
+// else if (componentId.startsWith('select_choice_')) {
+//   // get the associated game ID
+//   const gameId = componentId.replace('select_choice_', '');
+
+//   if (activeVetos[gameId]) {
+//     // Get user ID and object choice for responding user
+//     const userId = req.body.member.user.id;
+//     const objectName = data.values[0];
+//     // Calculate result from helper function
+//     const resultStr = getResult(activeVetos[gameId], {
+//       id: userId,
+//       objectName,
+//     });
+
+//     // Remove game from storage
+//     delete activeVetos[gameId];
+//     // Update message with token in request body
+//     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/${req.body.message.id}`;
+
+//     try {
+//       // Send results
+//       await res.send({
+//         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+//         data: { content: resultStr },
+//       });
+//       // Update ephemeral message
+//       await DiscordRequest(endpoint, {
+//         method: 'PATCH',
+//         body: {
+//           content: 'Nice choice ' + getRandomEmoji(),
+//           components: [],
+//         },
+//       });
+//     } catch (err) {
+//       console.error('Error sending message:', err);
+//     }
+//   }
+// }
