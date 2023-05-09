@@ -3,11 +3,13 @@ import express from 'express';
 import {
   InteractionType,
   InteractionResponseType,
+  InteractionResponseFlags,
 } from 'discord-interactions';
 import { VerifyDiscordRequest, getRandomEmoji } from './utils.js';
 import {
   doStartVeto,
   doStartVetoThread,
+  doTeamSelect,
   doVetoHelp,
 } from './veto.js';
 import {
@@ -31,7 +33,7 @@ app.use(
  */
 app.post('/interactions', async function (req, res) {
   // Interaction type and data
-  const { type, id, data } = req.body;
+  const { type, channel, data } = req.body;
 
   // Handle interaction types
   switch (type) {
@@ -45,8 +47,18 @@ app.post('/interactions', async function (req, res) {
           doTest(res);
           break;
         case 'veto':
-          if (id) {
-            doStartVeto(id, req, res);
+          // Don't allow vetos outside of a server text channel
+          if (channel.type === 0) {
+            doStartVeto(req, res);
+          } else {
+            await res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content:
+                  'You can only start veto sessions in a server text channel',
+                flags: InteractionResponseFlags.EPHEMERAL,
+              },
+            });
           }
           break;
         case 'veto-help':
@@ -63,7 +75,7 @@ app.post('/interactions', async function (req, res) {
         await doStartVetoThread(componentId, req, res);
       }
       if (componentId.startsWith(TEAM_SELECT_BUTTON_ID)) {
-        await doSelectTeam(componentId, req, res);
+        await doTeamSelect(componentId, req, res);
       }
       break;
   }

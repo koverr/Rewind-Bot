@@ -22,7 +22,7 @@ export function getActiveVetos() {
   return activeVetos;
 }
 
-export function doStartVeto(id, req, res) {
+export function doStartVeto(req, res) {
   // The captain who requested the veto
   const user1 = req.body.member.user.id;
   // The captain the requester chose
@@ -84,22 +84,16 @@ export async function doStartVetoThread(componentId, req, res) {
   const initUser = await GetUser(veto.initUser);
   const joinUser = await GetUser(veto.joinUser);
 
-  if (!isValidVetoInteraction(veto, interactionUser)) {
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        //TODO: Fix formatting
-        content: 'You are not part of this veto',
-        flags: InteractionResponseFlags.EPHEMERAL,
-      },
-    });
-  }
+  if (!isValidVetoInteraction(veto, interactionUser, res)) return;
+
   console.log('Veto session found, and expected user interacted');
 
   const headUser = choice === 'heads' ? joinUser : initUser;
   const tailUser = choice === 'tails' ? joinUser : initUser;
   const coinflip = Math.random() < 0.5 ? 'heads' : 'tails';
   const coinflipWinner = coinflip === 'heads' ? headUser : tailUser;
+  // Add winner to veto session
+  veto.coinflipWinner = coinflipWinner.id;
 
   try {
     await res.send({
@@ -113,6 +107,8 @@ The flip was ${coinflip}! <@${coinflipWinner.id}> selecting Team A or B...`,
         components: [],
       },
     });
+    // Wait a second so above edit doesn't f up the connected thread in the UI
+    await new Promise((r) => setTimeout(r, 1000));
     const channel = await StartThreadWithMessage(
       req.body.channel_id,
       req.body.message.id,
@@ -122,7 +118,7 @@ The flip was ${coinflip}! <@${coinflipWinner.id}> selecting Team A or B...`,
     );
     //TODO: Send message to coinflip winner
     await CreateMessage(channel.id, {
-      content: `<@${coinflipWinner.id}>, select Team A or B. Try \`/veto help\` to learn what this means.`,
+      content: `<@${coinflipWinner.id}>, select Team A or B. Try \`/veto-help\` to learn what this means.`,
       components: [
         {
           type: MessageComponentTypes.ACTION_ROW,
@@ -130,13 +126,13 @@ The flip was ${coinflip}! <@${coinflipWinner.id}> selecting Team A or B...`,
             {
               type: MessageComponentTypes.BUTTON,
               custom_id: `${TEAM_SELECT_BUTTON_ID}${vetoId}/a`,
-              label: '🅰️',
+              label: 'Team 🅰️',
               style: ButtonStyleTypes.SECONDARY,
             },
             {
               type: MessageComponentTypes.BUTTON,
               custom_id: `${TEAM_SELECT_BUTTON_ID}${vetoId}/b`,
-              label: '🅱️',
+              label: 'Team 🅱️',
               style: ButtonStyleTypes.SECONDARY,
             },
           ],
@@ -148,21 +144,63 @@ The flip was ${coinflip}! <@${coinflipWinner.id}> selecting Team A or B...`,
   }
 }
 
-function isValidVetoInteraction(veto, interactionUser) {
-  if (!veto) {
-    console.log('Veto session not found');
-    //TODO: Send ephemeral message to user
-    return false;
+export async function doTeamSelect(componentId, req, res) {
+  const [vetoId, choice] = componentId
+    .replace(TEAM_SELECT_BUTTON_ID, '')
+    .split('/');
+  const [users, gameId] = vetoId.split('-');
+  const game = getGames().find((game) => game.id === gameId);
+  const interactionUser = req.body.member.user.id;
+  const veto = activeVetos[vetoId];
+  const initUser = await GetUser(veto.initUser);
+  const joinUser = await GetUser(veto.joinUser);
+
+  if (veto.coinflipWinner !== interactionUser) {
+    console.log('Unexpected user interaction');
+    res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'You are not the coinflip winner, goofball 😜',
+        flags: InteractionResponseFlags.EPHEMERAL,
+      },
+    });
+    return;
   }
 
+  // Team selected, start with veto process
+}
+
+function isValidVetoInteraction(veto, interactionUser, res) {
+  if (!veto) {
+    console.log('Veto session not found');
+    res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Veto session not found',
+        flags: InteractionResponseFlags.EPHEMERAL,
+      },
+    });
+    return false;
+  }
   if (veto.joinUser !== interactionUser) {
     console.log('Unexpected user interaction');
     if (veto.initUser === interactionUser) {
       console.log('User is the veto initiator');
-      //TODO: Send ephemeral message to user
+      res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: "You can't join your own veto request, silly 😜.",
+          flags: InteractionResponseFlags.EPHEMERAL,
+        },
+      });
     } else {
-      console.log('User is not part of the veto');
-      //TODO: Send ephemeral message to user
+      res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'Mind your own business 😉',
+          flags: InteractionResponseFlags.EPHEMERAL,
+        },
+      });
     }
     return false;
   }
