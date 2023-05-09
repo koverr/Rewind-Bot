@@ -81,15 +81,14 @@ export async function StartThreadWithMessage(
   const endpoint = `channels/${channelId}/messages/${messageId}/threads`;
 
   try {
-    await DiscordRequest(endpoint, {
+    const res = await DiscordRequest(endpoint, {
       method: 'POST',
       body: {
         name: `${user1} & ${user2} ${game} Veto Thread`,
         auto_archive_duration: 60,
-        // type: 12,
-        // invitable: false,
       },
     });
+    return res.json();
   } catch (err) {
     console.error(err);
   }
@@ -103,6 +102,19 @@ export async function GetUser(userId) {
       method: 'GET',
     });
     return res.json();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function CreateMessage(channelId, content) {
+  const endpoint = `channels/${channelId}/messages`;
+
+  try {
+    return await DiscordRequest(endpoint, {
+      method: 'POST',
+      body: content,
+    });
   } catch (err) {
     console.error(err);
   }

@@ -47,11 +47,17 @@ const MAP_VETO_COMMAND = {
   ],
 };
 
+const MAP_VETO_HELP = {
+  type: 1,
+  name: 'veto-help',
+  description: 'Explains how the veto process works',
+};
+
 // const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND];
 
 InstallGlobalCommands(process.env.APP_ID, [TEST_COMMAND]);
 InstallGuildCommands(
   process.env.APP_ID,
   process.env.BOT_LAND_GUILD_ID,
-  [MAP_VETO_COMMAND]
+  [MAP_VETO_COMMAND, MAP_VETO_HELP]
 );

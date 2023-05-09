@@ -12,7 +12,11 @@ import {
   DiscordRequest,
 } from './utils.js';
 import { getShuffledOptions, getResult } from './game.js';
-import { doStartVeto, doStartVetoThread } from './veto.js';
+import {
+  doStartVeto,
+  doStartVetoThread,
+  doVetoHelp,
+} from './veto.js';
 import { VETO_JOIN_BUTTON_ID } from './constants.js';
 
 // Create an express app
@@ -48,6 +52,9 @@ app.post('/interactions', async function (req, res) {
           if (id) {
             doStartVeto(id, req, res);
           }
+          break;
+        case 'veto-help':
+          doVetoHelp(res);
           break;
       }
       break;

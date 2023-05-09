@@ -3,9 +3,14 @@ import {
   InteractionResponseType,
   MessageComponentTypes,
   ButtonStyleTypes,
+  InteractionResponseFlags,
 } from 'discord-interactions';
-import { VETO_JOIN_BUTTON_ID } from './constants.js';
 import {
+  TEAM_SELECT_BUTTON_ID,
+  VETO_JOIN_BUTTON_ID,
+} from './constants.js';
+import {
+  CreateMessage,
   DiscordRequest,
   GetUser,
   StartThreadWithMessage,
@@ -85,7 +90,7 @@ export async function doStartVetoThread(componentId, req, res) {
   const [users, gameId] = vetoId.split('-');
   const game = getGames().find((game) => game.id === gameId);
   const interactionUser = req.body.member.user.id;
-  const veto = getActiveVetos()[vetoId];
+  const veto = activeVetos[vetoId];
   const initUser = await GetUser(veto.initUser);
   const joinUser = await GetUser(veto.joinUser);
 
@@ -114,10 +119,31 @@ The flip was ${coinflip}! <@${coinflipWinner.id}> selecting Team A or B...`,
       req.body.message.id,
       initUser.username,
       joinUser.username,
-      gameId,
-      coinflipWinner
+      gameId
     );
     //TODO: Send message to coinflip winner
+    await CreateMessage(channel.id, {
+      content: `<@${coinflipWinner.id}>, select Team A or B. Try \`/veto help\` to learn what this means.`,
+      components: [
+        {
+          type: MessageComponentTypes.ACTION_ROW,
+          components: [
+            {
+              type: MessageComponentTypes.BUTTON,
+              custom_id: `${TEAM_SELECT_BUTTON_ID}${vetoId}/a`,
+              label: '🅰️',
+              style: ButtonStyleTypes.SECONDARY,
+            },
+            {
+              type: MessageComponentTypes.BUTTON,
+              custom_id: `${TEAM_SELECT_BUTTON_ID}${vetoId}/b`,
+              label: '🅱️',
+              style: ButtonStyleTypes.SECONDARY,
+            },
+          ],
+        },
+      ],
+    });
   } catch (err) {
     console.error('Error sending message', err);
   }
@@ -142,4 +168,27 @@ function isValidVetoInteraction(veto, interactionUser) {
     return false;
   }
   return true;
+}
+
+export function doVetoHelp(res) {
+  res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      //TODO: Fix formatting
+      content: `MAP PICKS AND BANS
+
+      1) Flip a coin. The winner decides whether they represent Team A or Team B.
+      
+      2) Team A bans one Hardpoint map, after which Team B bans another. Team A then selects the first Hardpoint map (Map 1), following which Team B selects the second (Map 4).
+      
+      3) Team B then selects the first Search and Destroy map to be banned. Team A then bans a second Search and Destroy map. Team B selects the first Search and Destroy map (Map 2) while Team A selects the second Search and Destroy map (Map 5).
+      
+      4) Finally, Team A bans a Control map, then Team B selects which map to play between the remaining two Control maps (Map 3).
+      
+      For all maps, the team that did NOT select the map may choose side. For example, since Team A selected Map 1, Team B will determine which side to start on for that map.
+      
+      Team A hosts Maps 1 and 3, Team B hosts Maps 2, 4, and 5.`,
+      flags: InteractionResponseFlags.EPHEMERAL,
+    },
+  });
 }
