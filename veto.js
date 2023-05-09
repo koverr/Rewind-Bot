@@ -11,7 +11,6 @@ import {
 } from './constants.js';
 import {
   CreateMessage,
-  DiscordRequest,
   GetUser,
   StartThreadWithMessage,
 } from './utils.js';
@@ -44,15 +43,6 @@ export function doStartVeto(id, req, res) {
     joinUser: user2,
     // modes: [...game.modes],
   };
-
-  // Start a thread with Captains and GMs
-  // StartThreadWithMessage(
-  //   process.env.BOT_LAND_GENERAL_ID,
-  //   id,
-  //   user1,
-  //   user2,
-  //   gameId
-  // );
 
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -94,7 +84,16 @@ export async function doStartVetoThread(componentId, req, res) {
   const initUser = await GetUser(veto.initUser);
   const joinUser = await GetUser(veto.joinUser);
 
-  if (!isValidVetoInteraction(veto, interactionUser)) return;
+  if (!isValidVetoInteraction(veto, interactionUser)) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        //TODO: Fix formatting
+        content: 'You are not part of this veto',
+        flags: InteractionResponseFlags.EPHEMERAL,
+      },
+    });
+  }
   console.log('Veto session found, and expected user interacted');
 
   const headUser = choice === 'heads' ? joinUser : initUser;
