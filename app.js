@@ -54,8 +54,7 @@ app.post('/interactions', async function (req, res) {
             await res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
               data: {
-                content:
-                  'You can only start veto sessions in a server text channel',
+                content: 'You can only start veto sessions in a server text channel',
                 flags: InteractionResponseFlags.EPHEMERAL,
               },
             });

@@ -120,6 +120,20 @@ export async function CreateMessage(channelId, content) {
   }
 }
 
+// Might not be usable
+export async function CreateFollowUpMessage(applicationId, interactionToken, content) {
+  const endpoint = `webhooks/${applicationId}/${interactionToken}`;
+
+  try {
+    await DiscordRequest(endpoint, {
+      method: 'POST',
+      body: content,
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 // Simple method that returns a random emoji from list
 export function getRandomEmoji() {
   const emojiList = [

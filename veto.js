@@ -14,7 +14,7 @@ import {
   GetUser,
   StartThreadWithMessage,
 } from './utils.js';
-import { getGames } from './data/games.js';
+import { getGames } from './games.js';
 
 // Store for in-progress games. In production, you'd want to use a DB
 const activeVetos = {};
@@ -92,8 +92,10 @@ export async function doStartVetoThread(componentId, req, res) {
   const tailUser = choice === 'tails' ? joinUser : initUser;
   const coinflip = Math.random() < 0.5 ? 'heads' : 'tails';
   const coinflipWinner = coinflip === 'heads' ? headUser : tailUser;
-  // Add winner to veto session
+  const coinflipLoser = coinflip === 'heads' ? tailUser : headUser;
+  // Add to veto session
   veto.coinflipWinner = coinflipWinner.id;
+  veto.coinflipLoser = coinflipLoser.id;
 
   try {
     await res.send({
@@ -116,7 +118,12 @@ The flip was ${coinflip}! <@${coinflipWinner.id}> selecting Team A or B...`,
       joinUser.username,
       gameId
     );
-    //TODO: Send message to coinflip winner
+    //TODO: Refactor this to create "session status" message in thread
+    // that will be updated as the veto progresses
+    // then send ephemeral messages to each user while updating
+    // the start of thread message and status message
+    //
+    // Maybe refactor into a DM only bot?
     await CreateMessage(channel.id, {
       content: `<@${coinflipWinner.id}>, select Team A or B. Try \`/veto-help\` to learn what this means.`,
       components: [
@@ -152,8 +159,8 @@ export async function doTeamSelect(componentId, req, res) {
   const game = getGames().find((game) => game.id === gameId);
   const interactionUser = req.body.member.user.id;
   const veto = activeVetos[vetoId];
-  const initUser = await GetUser(veto.initUser);
-  const joinUser = await GetUser(veto.joinUser);
+  const coinflipWinner = await GetUser(veto.coinflipWinner);
+  const coinflipLoser = await GetUser(veto.coinflipLoser);
 
   if (veto.coinflipWinner !== interactionUser) {
     console.log('Unexpected user interaction');
@@ -167,7 +174,20 @@ export async function doTeamSelect(componentId, req, res) {
     return;
   }
 
+  // Add map and mode info to veto session
+  veto.modes = [...game.modes];
+  veto.mapset = [];
+
   // Team selected, start with veto process
+  if (choice === 'a') {
+    // will behave differently with status and ephemeral messages
+    // await res.send({
+    //   type: InteractionResponseType.UPDATE_MESSAGE,
+    //   data: {
+    //     content: `<@${veto.coinflipWinner}> selected Team A... waiting on their ${veto.modes[0]}`
+    //   }
+    // })
+  }
 }
 
 function isValidVetoInteraction(veto, interactionUser, res) {
